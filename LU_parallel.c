@@ -17,25 +17,35 @@ void LU_Decomposition_Parallel_Column(double A[MAX_SIZE][MAX_SIZE], double L[MAX
     omp_set_num_threads(num_threads);  
     double start = omp_get_wtime();  // Start time
 
+    int k, j;  // Declare k and j before using them in parallel loops
+
     for (int i = 0; i < N; i++) {
-        // Compute Lower Triangular Matrix (L) first
-        #pragma omp parallel for schedule(dynamic)
-        for (int k = i; k < N; k++) {
+        // Compute Lower Triangular Matrix (L) first (Dynamic Scheduling)
+        #pragma omp parallel for private(k, j) shared(A, L, U, N) schedule(dynamic)
+        for (k = i; k < N; k++) {
             if (i != k) {
                 double sum = 0;
-                for (int j = 0; j < i; j++)
+                for (j = 0; j < i; j++)
                     sum += L[k][j] * U[j][i];
-                L[k][i] = (A[k][i] - sum) / U[i][i];
+
+                #pragma omp critical  // Ensuring only one thread modifies L[k][i] at a time
+                {
+                    L[k][i] = (A[k][i] - sum) / U[i][i];
+                }
             }
         }
 
-        // Compute Upper Triangular Matrix (U)
-        #pragma omp parallel for schedule(dynamic)
-        for (int k = i; k < N; k++) {
+        // Compute Upper Triangular Matrix (U) (Static Scheduling)
+        #pragma omp parallel for private(k, j) shared(A, L, U, N) schedule(static)
+        for (k = i; k < N; k++) {
             double sum = 0;
-            for (int j = 0; j < i; j++)
+            for (j = 0; j < i; j++)
                 sum += L[i][j] * U[j][k];
-            U[i][k] = A[i][k] - sum;
+
+            #pragma omp critical  // Ensuring safe write to U[i][k]
+            {
+                U[i][k] = A[i][k] - sum;
+            }
         }
     }
 
@@ -48,24 +58,34 @@ void LU_Decomposition_Parallel_Row(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SI
     omp_set_num_threads(num_threads);  
     double start = omp_get_wtime();  // Start time
 
+    int k, j;  // Declare k and j before using them in parallel loops
+
     for (int i = 0; i < N; i++) {
-        // Compute Upper Triangular Matrix (U) first
-        #pragma omp parallel for schedule(dynamic)
-        for (int k = i; k < N; k++) {
+        // Compute Upper Triangular Matrix (U) (Dynamic Scheduling)
+        #pragma omp parallel for private(k, j) shared(A, L, U, N) schedule(dynamic)
+        for (k = i; k < N; k++) {
             double sum = 0;
-            for (int j = 0; j < i; j++)
+            for (j = 0; j < i; j++)
                 sum += L[i][j] * U[j][k];
-            U[i][k] = A[i][k] - sum;
+
+            #pragma omp critical  // Ensuring safe write to U[i][k]
+            {
+                U[i][k] = A[i][k] - sum;
+            }
         }
 
-        // Compute Lower Triangular Matrix (L)
-        #pragma omp parallel for schedule(dynamic)
-        for (int k = i; k < N; k++) {
+        // Compute Lower Triangular Matrix (L) (Static Scheduling)
+        #pragma omp parallel for private(k, j) shared(A, L, U, N) schedule(static)
+        for (k = i; k < N; k++) {
             if (i != k) {
                 double sum = 0;
-                for (int j = 0; j < i; j++)
+                for (j = 0; j < i; j++)
                     sum += L[k][j] * U[j][i];
-                L[k][i] = (A[k][i] - sum) / U[i][i];
+
+                #pragma omp critical  // Ensuring only one thread modifies L[k][i] at a time
+                {
+                    L[k][i] = (A[k][i] - sum) / U[i][i];
+                }
             }
         }
     }
