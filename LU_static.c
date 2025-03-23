@@ -14,8 +14,8 @@ void initialize_matrix(double A[MAX_SIZE][MAX_SIZE], int N) {
             A[i][j] = (rand() % 100) + 1;  // Values between 1 and 100
 }
 
-// **Parallel LU Decomposition (Column-Major) with Dynamic Scheduling**
-void LU_Decomposition_Dynamic_Column(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZE][MAX_SIZE], double U[MAX_SIZE][MAX_SIZE], int N) {
+// **Parallel LU Decomposition (Column-Major) with Static Scheduling and Chunks**
+void LU_Decomposition_Static_Column(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZE][MAX_SIZE], double U[MAX_SIZE][MAX_SIZE], int N) {
     omp_set_num_threads(NUM_THREADS);
     double start = omp_get_wtime();  // Start time
 
@@ -23,7 +23,7 @@ void LU_Decomposition_Dynamic_Column(double A[MAX_SIZE][MAX_SIZE], double L[MAX_
         int end_chunk = (i + CHUNK_SIZE > N) ? N : (i + CHUNK_SIZE);
 
         // Compute Lower Triangular Matrix (L) first
-        #pragma omp parallel for schedule(dynamic, CHUNK_SIZE)
+        #pragma omp parallel for schedule(static)
         for (int k = i; k < end_chunk; k++) {
             if (i != k) {
                 double sum = 0;
@@ -34,7 +34,7 @@ void LU_Decomposition_Dynamic_Column(double A[MAX_SIZE][MAX_SIZE], double L[MAX_
         }
 
         // Compute Upper Triangular Matrix (U)
-        #pragma omp parallel for schedule(dynamic, CHUNK_SIZE)
+        #pragma omp parallel for schedule(static)
         for (int k = i; k < end_chunk; k++) {
             double sum = 0;
             for (int j = 0; j < i; j++)
@@ -44,11 +44,11 @@ void LU_Decomposition_Dynamic_Column(double A[MAX_SIZE][MAX_SIZE], double L[MAX_
     }
 
     double end = omp_get_wtime();  // End time
-    printf("Column-Major LU Execution Time (Dynamic, %d threads, Chunk %d): %.6f sec\n", NUM_THREADS, CHUNK_SIZE, end - start);
+    printf("Column-Major LU Execution Time (Static, %d threads, Chunk %d): %.6f sec\n", NUM_THREADS, CHUNK_SIZE, end - start);
 }
 
-// **Parallel LU Decomposition (Row-Major) with Dynamic Scheduling**
-void LU_Decomposition_Dynamic_Row(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZE][MAX_SIZE], double U[MAX_SIZE][MAX_SIZE], int N) {
+// **Parallel LU Decomposition (Row-Major) with Static Scheduling and Chunks**
+void LU_Decomposition_Static_Row(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZE][MAX_SIZE], double U[MAX_SIZE][MAX_SIZE], int N) {
     omp_set_num_threads(NUM_THREADS);
     double start = omp_get_wtime();  // Start time
 
@@ -56,7 +56,7 @@ void LU_Decomposition_Dynamic_Row(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZ
         int end_chunk = (i + CHUNK_SIZE > N) ? N : (i + CHUNK_SIZE);
 
         // Compute Upper Triangular Matrix (U) first
-        #pragma omp parallel for schedule(dynamic, CHUNK_SIZE)
+        #pragma omp parallel for schedule(static)
         for (int k = i; k < end_chunk; k++) {
             double sum = 0;
             for (int j = 0; j < i; j++)
@@ -65,7 +65,7 @@ void LU_Decomposition_Dynamic_Row(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZ
         }
 
         // Compute Lower Triangular Matrix (L)
-        #pragma omp parallel for schedule(dynamic, CHUNK_SIZE)
+        #pragma omp parallel for schedule(static)
         for (int k = i; k < end_chunk; k++) {
             if (i != k) {
                 double sum = 0;
@@ -77,18 +77,18 @@ void LU_Decomposition_Dynamic_Row(double A[MAX_SIZE][MAX_SIZE], double L[MAX_SIZ
     }
 
     double end = omp_get_wtime();  // End time
-    printf("Row-Major LU Execution Time (Dynamic, %d threads, Chunk %d): %.6f sec\n", NUM_THREADS, CHUNK_SIZE, end - start);
+    printf("Row-Major LU Execution Time (Static, %d threads, Chunk %d): %.6f sec\n", NUM_THREADS, CHUNK_SIZE, end - start);
 }
 
 int main() {
-    int N = 512;  // Fixed matrix size 2000x2000
+    int N = 512;  
     printf("\n--- Running with %d Threads, Matrix Size: %d x %d, Chunk Size: %d ---\n", NUM_THREADS, N, N, CHUNK_SIZE);
     
     static double A[MAX_SIZE][MAX_SIZE], L[MAX_SIZE][MAX_SIZE], U[MAX_SIZE][MAX_SIZE];
     initialize_matrix(A, N);
     
-    LU_Decomposition_Dynamic_Column(A, L, U, N);
-    LU_Decomposition_Dynamic_Row(A, L, U, N);
+    LU_Decomposition_Static_Column(A, L, U, N);
+    LU_Decomposition_Static_Row(A, L, U, N);
 
     return 0;
 }
